@@ -93,6 +93,14 @@ make that harmless.
   lines: `java.util.regex` backtracks, and a pattern such as `(.*a){10}x` did not finish within
   20 seconds on a line of just 40 characters (measured on Java 17). The text being matched checks the clock every 1,024 characters it hands the matcher. A
   pattern that overflows the matcher's stack is caught too.
+- **Patterns that could loop without reading are refused.** The time limit is checked as the
+  matcher reads characters, and a repeated part that matches without reading, such as an empty
+  lookahead, never reads: `(?:(?:(?:(?:(?=)){1000}){1000}){1000}){1000}` ran for over 10 seconds
+  without a single read (measured). Java ends `*`, `+` and the optional part of `{n,m}` as soon as a
+  turn reads nothing, so only the minimum of a count is forced; a pattern whose nested minimums
+  multiply past 100,000 is refused with 400 before it runs. The slowest pattern still allowed
+  stopped at 15.1 seconds (measured). Comments mode, `(?x)`, is refused too: a `#` comment can hide a
+  parenthesis from any reading of the pattern but Java's own.
 - **Queries are capped at 1,000 characters.** The cap does not keep the event log short: the
   engine records a request before the plugin sees it, so a longer query is recorded word for word
   and then refused.

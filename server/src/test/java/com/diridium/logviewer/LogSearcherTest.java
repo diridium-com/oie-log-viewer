@@ -216,6 +216,33 @@ class LogSearcherTest {
     }
 
     @Test
+    void aPatternWhoseRepeatsWouldLoopWithoutReadingIsRefusedForSearchAndHighlighting() throws Exception {
+        LogFixture fx = new LogFixture(dir, StandardCharsets.UTF_8);
+        fx.writeActive("INFO a line\n".getBytes(StandardCharsets.UTF_8), 1_000_000L);
+        String id = fx.idOf("mirth.log");
+        // Loops a trillion times without reading a character, so the time limit, which is checked
+        // as characters are read, would never stop it.
+        String runaway = "(?:(?:(?:(?:(?=)){1000}){1000}){1000}){1000}";
+        LogViewerException search = assertThrows(LogViewerException.class,
+                () -> fx.service.search(runaway, true, false, null, null, null));
+        assertEquals(LogViewerException.Kind.BAD_REQUEST, search.getKind());
+        assertEquals("The pattern repeats too many times: its nested repeat counts multiply to more than 100,000."
+                + " Use smaller counts.", search.getMessage());
+        LogViewerException page = assertThrows(LogViewerException.class,
+                () -> fx.service.readPage(id, LogPageAnchor.TAIL, null, runaway, true, false));
+        assertEquals(LogViewerException.Kind.BAD_REQUEST, page.getKind());
+
+        LogViewerException comments = assertThrows(LogViewerException.class,
+                () -> fx.service.search("(?x)INFO # comment", true, false, null, null, null));
+        assertEquals("Comments mode, (?x), is not supported in log searches.", comments.getMessage());
+
+        // At the limit, and as plain text, the same characters are fine.
+        assertEquals(1, fx.service.search("(?:(?:I(?=N)){100}){1000}|INFO", true, false, null, null, null)
+                .getMatches().size());
+        assertEquals(0, fx.service.search(runaway, false, false, null, null, null).getMatches().size());
+    }
+
+    @Test
     void resultsSurviveTheAdministratorsXStream() throws Exception {
         LogFixture fx = new LogFixture(dir, StandardCharsets.UTF_8);
         Files.write(fx.active, "ERROR \u000bMSH|\u001c\u0000 café\rPID|1\r\nINFO next\n"

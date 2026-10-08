@@ -10,6 +10,7 @@ import java.nio.file.NoSuchFileException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.function.LongSupplier;
@@ -125,12 +126,24 @@ final class LogSearcher {
         // UNICODE_CASE so a case-insensitive search for a name with accents
         // finds it in either case; plain CASE_INSENSITIVE folds ASCII only.
         int flags = caseSensitive ? 0 : Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE;
+        Pattern pattern;
         try {
-            return Pattern.compile(regex ? query : Pattern.quote(query), flags);
+            pattern = Pattern.compile(regex ? query : Pattern.quote(query), flags);
         } catch (PatternSyntaxException e) {
             throw new LogViewerException(LogViewerException.Kind.BAD_REQUEST,
                     "Invalid regular expression: " + e.getDescription());
         }
+        // The time limit is checked as characters are read; refuse what could loop without reading.
+        if (regex && RegexRepeats.usesComments(query)) {
+            throw new LogViewerException(LogViewerException.Kind.BAD_REQUEST,
+                    "Comments mode, (?x), is not supported in log searches.");
+        }
+        if (regex && RegexRepeats.forcedTurns(query) > RegexRepeats.MAX_FORCED_TURNS) {
+            throw new LogViewerException(LogViewerException.Kind.BAD_REQUEST, String.format(Locale.ROOT,
+                    "The pattern repeats too many times: its nested repeat counts multiply to more than %,d."
+                            + " Use smaller counts.", RegexRepeats.MAX_FORCED_TURNS));
+        }
+        return pattern;
     }
 
     Run start(Pattern pattern) {
