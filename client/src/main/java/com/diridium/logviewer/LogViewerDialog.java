@@ -517,10 +517,19 @@ public class LogViewerDialog extends JDialog {
                         goneAfterList = viewed;
                         loadFiles(null, false);
                     } else {
-                        // A rotated file's old text no longer matches any id the server will accept.
                         LogPage page = viewerPane.page();
-                        if (LogViewerNotice.isStale(e) || page == null || !file.getId().equals(page.getFileId())) {
+                        if (!LogViewerNotice.isStale(e) && page != null && viewed != null
+                                && !viewed.getId().equals(file.getId())) {
+                            // Opening another file failed: the page on screen stays, and the list points
+                            // back at its file, so clicking the failed file again tries it again.
+                            current = viewed;
+                            filePane.select(viewed);
+                        } else if (LogViewerNotice.isStale(e) || page == null || !file.getId().equals(page.getFileId())) {
+                            // A rotated file's old text no longer matches any id the server will accept.
+                            // Nothing stays selected, so clicking the file again tries it again.
                             clearViewer();
+                            current = null;
+                            filePane.select(null);
                         }
                         showError(e, false, file.getName());
                     }
