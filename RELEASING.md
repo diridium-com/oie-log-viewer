@@ -12,8 +12,10 @@ automatically.
   - `package/webadmin/plugin.json`: `version`
   - `package/webadmin/package.json` and `package-lock.json`: run
     `npm version X.Y.Z --no-git-tag-version` in `package/webadmin`, which updates both.
-- **For a new engine version**, also update `mc.version` in `pom.xml`, and `minEngineVersion` and
-  `maxEngineVersion` in `oie.json`. The engine loads an extension only on the exact version it was
+- **For a new engine version**, also update `mc.version` and `oie.dist.sha256` (the SHA-256 of the
+  engine's release tarball, which `scripts/install-engine-jars.sh` checks) in `pom.xml`, and
+  `minEngineVersion` and `maxEngineVersion` in `oie.json`.
+  The engine loads an extension only on the exact version it was
   built for (`ExtensionLoader.isExtensionCompatible`), and the store listing is capped with
   `maxEngineVersion` for that reason. Check log file discovery on the new engine before releasing:
   it reads the engine's log4j configuration.
@@ -33,8 +35,12 @@ git push origin vX.Y.Z
 
 `release.yml` checks that the tag matches all five version files (naming any that do not), refuses
 a tag whose release is already published, builds and runs the tests, and creates a **draft**
-release with the unsigned `oie-log-viewer-X.Y.Z.zip` and its `.sha256`. Pushing the same tag again
-while the release is still a draft rebuilds the draft.
+release with the unsigned `oie-log-viewer-X.Y.Z.zip` and its `.sha256`.
+
+Pushing a tag the remote already has does nothing. To rebuild a draft, delete the draft release and
+the remote tag, then tag and push again. **Never re-run the workflow or re-push the tag once step 4
+has put the signed files on the draft:** the rebuild uploads the unsigned files over them. Only a
+published release is refused.
 
 ## 3. Build and sign on the Mac
 
