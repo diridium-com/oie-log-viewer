@@ -6,6 +6,8 @@ the OIE Web Administrator.
 
 <img src="https://raw.githubusercontent.com/wiki/diridium-com/oie-log-viewer/images/1.png" alt="The Swing viewer: the file list, a page of mirth.log.8.zip with the search match highlighted, and the search results by file" width="800">
 
+<img src="https://raw.githubusercontent.com/wiki/diridium-com/oie-log-viewer/images/2.png" alt="The web administrator's Log Files view: a page of mirth.log.8.zip with the search match highlighted, and the search results" width="800">
+
 ## Features
 
 - **Finds the logs itself** from the engine's own log4j configuration: the active `mirth.log` and
@@ -31,8 +33,6 @@ the OIE Web Administrator.
 
 - Swing Administrator: **Other** task pane, **View Log Files**.
 - Web Administrator: **Log Files** under Monitor.
-
-<img src="https://raw.githubusercontent.com/wiki/diridium-com/oie-log-viewer/images/2.png" alt="The web administrator's Log Files view: a page of mirth.log.8.zip with the search match highlighted, and the search results" width="800">
 
 ## Permissions and auditing
 
