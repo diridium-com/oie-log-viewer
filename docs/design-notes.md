@@ -226,5 +226,6 @@ No tests are skipped.
   streaming download, the 409/429 statuses and the Role Based Access Control behaviour were checked
   live. `PluginXmlWiringTest` checks the plugin's declarations, and the service is tested directly.
 - **Windows engines are untested** (file sharing and rename behaviour, see above).
-- **Very large logs** were exercised up to tens of megabytes; the 1 GB archive limit and the 64 MB
-  line-numbering limit are covered by unit tests, not by real files of that size.
+- **Very large logs** were exercised up to tens of megabytes. The 64 MB line-numbering limit has no
+  test, and the 1 GB archive limit is tested only for a page offset past it, not by reading an
+  archive that large.
