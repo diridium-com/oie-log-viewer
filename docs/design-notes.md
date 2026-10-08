@@ -54,7 +54,8 @@ is no way to pick a subset of files. That is deliberate:
 - **An archive in a folder is named by its path below that directory**, such as
   `2026-10-06/mirth.log.3.zip`, in the list, in search results and in the audit log. A download of
   it is saved as `2026-10-06_mirth.log.3.zip`, since a file name cannot hold a slash.
-- **At most 500 folders are read per appender, newest first**, with a warning when there are more.
+- **At most 500 folders are read at each folder level, newest first**, with a warning when there
+  are more (a day/hour layout reads up to 500 days, then up to 500 hours).
   log4j removes old folders only if the configuration tells it to, and a folder holds at least one
   archive, so older folders could not add to the 500 files listed anyway.
 - **A folder or file that cannot be read is named in the list's warnings**, so the list is never

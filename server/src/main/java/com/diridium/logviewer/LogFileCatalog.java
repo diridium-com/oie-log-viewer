@@ -62,10 +62,12 @@ final class LogFileCatalog {
     static final int MAX_LISTED_FILES = 500;
 
     /**
-     * Cap on the folders read for one appender's archives, newest first. A
-     * folder holds at least one archive, so more folders than files listed
-     * could add nothing to the list; it also bounds the work when log4j makes
-     * a folder per day or per hour and nothing deletes the old ones.
+     * Cap on the folders read at each level of one appender's date folders,
+     * newest first (a day/hour layout gets up to this many days, then up to
+     * this many hours). A folder holds at least one archive, so more folders
+     * than files listed could add nothing to the list; it also bounds the work
+     * when log4j makes a folder per day or per hour and nothing deletes the
+     * old ones.
      */
     static final int MAX_ARCHIVE_FOLDERS = MAX_LISTED_FILES;
 
@@ -210,7 +212,7 @@ final class LogFileCatalog {
      * whose paths match the pattern. The base is read first; a folder in it is
      * entered only when it is a real directory (not a symbolic link) and its
      * path can still lead to a match, then the folders below it, level by
-     * level, newest first and at most {@link #MAX_ARCHIVE_FOLDERS} of them.
+     * level, newest first and at most {@link #MAX_ARCHIVE_FOLDERS} at each level.
      */
     private static final class ArchiveWalk {
         private final LogAppenderSource.Appender appender;
@@ -228,20 +230,22 @@ final class LogFileCatalog {
         void run() {
             Path base = Paths.get(pattern.baseDir().isEmpty() ? "." : pattern.baseDir()).toAbsolutePath().normalize();
             List<Folder> level = List.of(new Folder("", base, 0));
-            int folders = 0;
+            boolean capped = false;
             for (int depth = 0; !level.isEmpty(); depth++) {
                 List<Folder> next = new ArrayList<>();
                 for (Folder folder : level) {
                     read(folder, depth < MAX_FOLDER_DEPTH ? next : null);
                 }
                 next.sort(Comparator.comparingLong(Folder::lastModified).reversed());
-                if (folders + next.size() > MAX_ARCHIVE_FOLDERS) {
-                    found.warnings.add("Archives of appender " + appender.name() + " are listed from its newest "
-                            + MAX_ARCHIVE_FOLDERS + " folders only.");
-                    next = next.subList(0, MAX_ARCHIVE_FOLDERS - folders);
+                if (next.size() > MAX_ARCHIVE_FOLDERS) {
+                    next = next.subList(0, MAX_ARCHIVE_FOLDERS);
+                    capped = true;
                 }
-                folders += next.size();
                 level = next;
+            }
+            if (capped) {
+                found.warnings.add("Archives of appender " + appender.name() + " are listed from its newest "
+                        + MAX_ARCHIVE_FOLDERS + " folders only.");
             }
         }
 

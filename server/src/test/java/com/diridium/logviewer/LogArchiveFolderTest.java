@@ -186,6 +186,31 @@ class LogArchiveFolderTest {
     }
 
     @Test
+    void theFolderCapAppliesToEachLevelOfNestedFolders() throws Exception {
+        // logs/<day>/<hour>/app.log.N.gz: the day folders must not use up the hour folders' share.
+        for (int days : new int[] {LogFileCatalog.MAX_ARCHIVE_FOLDERS - 1, LogFileCatalog.MAX_ARCHIVE_FOLDERS + 1}) {
+            Path logs = Files.createDirectory(dir.resolve("nested-" + days));
+            Path active = write(logs.resolve("app.log"), "INFO now\n", 9_000_000L);
+            Appender appender = new Appender("app", active.toString(),
+                    logs + "/${date:yyyy-MM-dd}/${date:HH}/app.log.%i.gz", StandardCharsets.UTF_8);
+            for (int d = 0; d < days; d++) {
+                java.time.LocalDate day = java.time.LocalDate.of(2025, 1, 1).plusDays(d);
+                Path hour = logs.resolve(day.toString()).resolve("07");
+                write(hour.resolve("app.log.1.gz"), "x", 1_000_000L + d);
+                Files.setLastModifiedTime(hour, FileTime.fromMillis(1_000_000L + d));
+                Files.setLastModifiedTime(hour.getParent(), FileTime.fromMillis(1_000_000L + d));
+            }
+            LogFileCatalog.Discovery discovery = new LogFileCatalog(() -> List.of(appender)).discover();
+            int expected = Math.min(days, LogFileCatalog.MAX_ARCHIVE_FOLDERS);
+            assertEquals(1 + expected, discovery.files().size(), days + " days");
+            assertEquals(days > LogFileCatalog.MAX_ARCHIVE_FOLDERS
+                    ? List.of("Archives of appender app are listed from its newest "
+                            + LogFileCatalog.MAX_ARCHIVE_FOLDERS + " folders only.")
+                    : List.of(), discovery.warnings(), days + " days");
+        }
+    }
+
+    @Test
     void anEntryOrAFolderThatCannotBeReadIsAWarningAndTheRestIsListed() throws Exception {
         Path logs = Files.createDirectory(dir.resolve("logs"));
         Appender appender = probeLayout(logs);
