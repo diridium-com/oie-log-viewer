@@ -5,7 +5,6 @@ package com.diridium.logviewer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Method;
@@ -14,6 +13,8 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.HashSet;
 import java.util.Set;
+
+import javax.ws.rs.core.Response;
 
 import org.junit.jupiter.api.Test;
 
@@ -29,7 +30,7 @@ class LogViewerClientPluginTypesTest {
         Set<Class<?>> reachable = new HashSet<>();
         for (Method method : LogViewerServletInterface.class.getMethods()) {
             // The download is a stream of the file's bytes, not XML.
-            if (method.getReturnType() != InputStream.class) {
+            if (method.getReturnType() != Response.class) {
                 walk(method.getGenericReturnType(), reachable);
             }
         }

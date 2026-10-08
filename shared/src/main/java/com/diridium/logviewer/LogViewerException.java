@@ -22,9 +22,9 @@ public class LogViewerException extends Exception {
         STALE,
         /** The file exists but can only be downloaded (unsupported compression or charset). */
         NOT_VIEWABLE,
-        /** Missing or malformed parameters, or an invalid regular expression. */
+        /** Missing or malformed parameters, or a regular expression that is invalid or refused. */
         BAD_REQUEST,
-        /** The search concurrency cap is in use. Try again shortly. */
+        /** The concurrency cap for searches or page reads is in use. Try again shortly. */
         BUSY,
         /** Serving this page would mean decompressing more than the per-request cap. Download instead. */
         TOO_LARGE,

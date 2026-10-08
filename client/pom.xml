@@ -34,6 +34,8 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
+            <!-- Not called directly: the Administrator's Frame extends JXFrame, and addTask
+                 takes the JXTaskPane the entry goes in. -->
             <groupId>org.swinglabs</groupId>
             <artifactId>swingx-core</artifactId>
             <version>1.6.2-2</version>

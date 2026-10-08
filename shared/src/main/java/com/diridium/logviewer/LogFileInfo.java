@@ -43,7 +43,10 @@ public class LogFileInfo implements Serializable {
         this.id = id;
     }
 
-    /** File name only, never a path. */
+    /**
+     * The file's name. An archive kept in date folders also carries its folders below the archive
+     * directory, as in {@code 2026-10-06/mirth.log.3.zip}. Never an absolute path.
+     */
     public String getName() {
         return name;
     }

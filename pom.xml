@@ -72,6 +72,8 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
+            <!-- Not called directly: ObjectXMLSerializer extends donkey's XStreamSerializer,
+                 so allowTypes does not compile without it. -->
             <groupId>com.mirth.connect</groupId>
             <artifactId>donkey-server</artifactId>
             <version>${mc.version}</version>

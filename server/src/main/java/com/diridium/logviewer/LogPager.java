@@ -90,10 +90,6 @@ final class LogPager {
         }
     }
 
-    LogPage page(OpenLogFile file, LogPageAnchor anchor, long offset) throws IOException, LogViewerException {
-        return page(file, anchor, offset, null);
-    }
-
     /**
      * @param highlighter finds the search's matches in the page's text, or
      *                    null when the request carried no search

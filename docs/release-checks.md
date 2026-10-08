@@ -42,8 +42,8 @@ should see.
   this point within its time limit (a very long line or a complex pattern). Try a simpler pattern."
 - Highlighting: a search matching nearly every character shows "Only the first 5,000 matches on
   this page are highlighted."
-- Find on this page: next, previous and Mark all, plain and regular expression. Swing: an invalid
-  expression says "Not a valid regular expression."; `(.*a){10}x` on a long line says "The
+- Find on this page: next, previous and (Swing only) Mark all, plain and regular expression. Swing:
+  an invalid expression says "Not a valid regular expression."; `(.*a){10}x` on a long line says "The
   expression took too long on this page." within about 2 seconds, and the Administrator stays
   responsive.
 - Busy: start three searches at once (two browser tabs and the Swing viewer): the third says "Two
