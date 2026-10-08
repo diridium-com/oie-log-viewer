@@ -9,7 +9,8 @@
  */
 
 import { platform } from '@oie/web-shell';
-import { revealTarget, highlightParams, PLAIN_TEXT_NOTICE } from './log-core.js';
+import { revealTarget, PLAIN_TEXT_NOTICE } from './log-core.js';
+import { pageMarksFor } from './log-search-core.js';
 import { normal, special as specialText, mapHighlights } from './log-display.js';
 import { createLogEditor } from './log-editor.js';
 
@@ -49,7 +50,7 @@ export function useViewer({ shown, special, wrap, resultsOpen, search, alive, no
     }, []);
 
     /* The key of the search whose highlights may be painted: only while the results are open. */
-    const activeKey = resultsOpen ? highlightKey(highlightParams(search.params)) : '';
+    const activeKey = highlightKey(pageMarksFor(resultsOpen, search));
 
     /* What the viewer holds for the page on screen, in the current mode. */
     const view = useMemo(() => {

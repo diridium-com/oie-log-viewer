@@ -10,9 +10,9 @@
  */
 
 import { platform } from '@oie/web-shell';
-import { EXT_PATH, noticeFrom, isStale, parseSearchResult, highlightParams, markDecision } from './log-core.js';
+import { EXT_PATH, noticeFrom, isStale, parseSearchResult, markDecision } from './log-core.js';
 import {
-    emptySearch, addCountResult, addWarnings, canCountRest, resultRows, groupAfterLoad, reopenScope
+    emptySearch, addCountResult, addWarnings, canCountRest, resultRows, groupAfterLoad, reopenScope, pageMarksFor
 } from './log-search-core.js';
 import { openSearchDialog } from './log-search-dialog.js';
 import { canDownloadNow } from './log-download.js';
@@ -117,6 +117,8 @@ export function useSearch({ alive, gates, filesRef, currentRef, goneRef, shownRe
             if (!resume) markPage();
         } catch (e) {
             if (!alive.current || !gates.search.current(token)) return;
+            // A new search the engine refused (a bad pattern) would be refused on every page read too.
+            if (!resume) updateSearch(Object.assign({}, base, { refused: true }));
             setSearchNote(resume ? 'The count could not be finished.' : 'The search failed.');
             setNotice(noticeFrom(e, false, canDownloadNow()));
         } finally {
@@ -126,7 +128,7 @@ export function useSearch({ alive, gates, filesRef, currentRef, goneRef, shownRe
 
     /* The highlight parameters every page request carries: the search's while the results are open, else none. */
     function pageMarks() {
-        return resultsOpenRef.current ? highlightParams(searchRef.current.params) : {};
+        return pageMarksFor(resultsOpenRef.current, searchRef.current);
     }
 
     /*

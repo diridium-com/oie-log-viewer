@@ -13,7 +13,7 @@
  * This file is pure ASCII: non-ASCII characters are built from their code points.
  */
 
-import { count, bytes, fileById, fileNameFromId } from './log-core.js';
+import { count, bytes, fileById, fileNameFromId, highlightParams } from './log-core.js';
 
 /* ---- wording ------------------------------------------------------------------ */
 
@@ -207,7 +207,19 @@ function nameOf(files, id) {
  * `stuck` is true when the last Count the rest came back with the resume point it was sent.
  */
 export function emptySearch() {
-    return { entries: [], filesInScope: 0, warnings: [], params: null, last: null, bytesSearched: 0, millis: 0, stuck: false };
+    return {
+        entries: [], filesInScope: 0, warnings: [], params: null, last: null, bytesSearched: 0, millis: 0, stuck: false,
+        refused: false
+    };
+}
+
+/**
+ * The highlight parameters a page request carries: the search's while its results are open, none
+ * when they are closed or when the engine refused the search (a bad pattern would be refused on
+ * every page read too, and paging would fail until the results were closed).
+ */
+export function pageMarksFor(resultsOpen, search) {
+    return resultsOpen && search && !search.refused ? highlightParams(search.params) : {};
 }
 
 /**

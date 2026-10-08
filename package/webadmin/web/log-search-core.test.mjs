@@ -12,7 +12,7 @@ import {
     searchNotes, resultsSummary, nextBatch, loadMoreText, loadingFromText,
     QUERY_MAX, QUERY_CUT_NOTE, pasteIsCut, reopenScope, staleGroupText,
     stoppedAtLimit, sameResumePoint, groupAfterLoad, groupEndRow,
-    KEEP_SEARCHING_TEXT, GROUP_TOO_COMPLEX_TEXT, STUCK_TEXT
+    KEEP_SEARCHING_TEXT, GROUP_TOO_COMPLEX_TEXT, STUCK_TEXT, pageMarksFor
 } from './log-search-core.js';
 
 // ---- count results ------------------------------------------------------------------
@@ -330,4 +330,13 @@ test('the other last rows of a group are as before', () => {
         'Click to show more.');
     // Everything loaded: no last row.
     assert.equal(groupEndRow(loaded({}, rows), big, false), null);
+});
+
+test('pages carry the search only while its results are open and the engine accepted it', () => {
+    const search = Object.assign(emptySearch(), { params: { query: '(unclosed', regex: true, caseSensitive: false } });
+    assert.deepEqual(pageMarksFor(true, search),
+        { highlightQuery: '(unclosed', highlightRegex: true, highlightCaseSensitive: false });
+    assert.deepEqual(pageMarksFor(false, search), {});
+    assert.deepEqual(pageMarksFor(true, Object.assign({}, search, { refused: true })), {});
+    assert.deepEqual(pageMarksFor(true, emptySearch()), {});
 });
