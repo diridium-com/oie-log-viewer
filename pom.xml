@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- SPDX-License-Identifier: MPL-2.0 -->
+<!-- Copyright (c) 2026 Diridium Technologies Inc. -->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.diridium</groupId>
+    <artifactId>oie-log-viewer</artifactId>
+    <version>${revision}</version>
+
+    <name>OIE Log Viewer</name>
+    <packaging>pom</packaging>
+
+    <properties>
+        <revision>1.0.0</revision>
+
+        <plugin.supported.mc.versions>${mc.version}</plugin.supported.mc.versions>
+
+        <mc.version>4.6.0</mc.version>
+        <!-- SHA-256 of the OIE distribution for mc.version (oie_unix_<version>.tar.gz), from
+             the release's sha256sums file. scripts/install-engine-jars.sh checks the download
+             against it before taking the engine jars from it. -->
+        <oie.dist.sha256>7c82e79027e671277e1d78d0f7bbb1c53ddf1be476f1e80c2ddbfcf7855900ea</oie.dist.sha256>
+        <javax-servlet.version>4.0.1</javax-servlet.version>
+        <javax-rs-api.version>2.0.1</javax-rs-api.version>
+        <!-- The version OIE 4.6.0 ships (server-lib and client-lib). -->
+        <xstream.version>1.4.20</xstream.version>
+        <slf4j.version>1.7.32</slf4j.version>
+        <junit5.version>5.10.2</junit5.version>
+        <!-- Match the version the engine ships (gradle/libs.versions.toml). -->
+        <reflections.version>0.9.10</reflections.version>
+        <commons-lang3.version>3.20.0</commons-lang3.version>
+
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- Fixed entry times in the jars, so the same source builds the same bytes. -->
+        <project.build.outputTimestamp>2026-10-07T00:00:00Z</project.build.outputTimestamp>
+
+        <!-- Signing disabled by default. Use -Psigning to enable. -->
+        <signing.skip>true</signing.skip>
+    </properties>
+
+    <profiles>
+        <profile>
+            <id>signing</id>
+            <properties>
+                <signing.skip>false</signing.skip>
+                <signing.keystore>NONE</signing.keystore>
+                <signing.storetype>PKCS11</signing.storetype>
+                <signing.providerClass>sun.security.pkcs11.SunPKCS11</signing.providerClass>
+                <signing.providerArg>${user.dir}/yubikey-pkcs11.cfg</signing.providerArg>
+                <signing.alias>Certificate for PIV Authentication</signing.alias>
+                <signing.storepass>${env.YUBIKEY_PIN}</signing.storepass>
+                <signing.certchain>${user.dir}/certchain.pem</signing.certchain>
+                <signing.tsa>http://timestamp.digicert.com</signing.tsa>
+            </properties>
+        </profile>
+    </profiles>
+
+    <organization>
+        <name>Diridium Technologies Inc.</name>
+        <url>https://github.com/diridium-com/oie-log-viewer</url>
+    </organization>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.mirth.connect</groupId>
+            <artifactId>mirth-server</artifactId>
+            <version>${mc.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.mirth.connect</groupId>
+            <artifactId>donkey-server</artifactId>
+            <version>${mc.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.mirth.connect</groupId>
+            <artifactId>mirth-client-core</artifactId>
+            <version>${mc.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>javax.servlet-api</artifactId>
+            <version>${javax-servlet.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>javax.ws.rs</groupId>
+            <artifactId>javax.ws.rs-api</artifactId>
+            <version>${javax-rs-api.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.thoughtworks.xstream</groupId>
+            <artifactId>xstream</artifactId>
+            <version>${xstream.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit5.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <!-- Used internally by OperationUtil.getOperationNamesForPermission. The engine
+                 ships it on the server classpath at runtime, but it arrives here through a
+                 provided-scope dependency, whose transitives Maven does not put on the test
+                 classpath. Declared here so tests exercise the real registration path. -->
+            <groupId>org.reflections</groupId>
+            <artifactId>reflections</artifactId>
+            <version>${reflections.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <!-- Same reason as reflections above: OperationUtil calls ArrayUtils. -->
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>${commons-lang3.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <modules>
+        <module>shared</module>
+        <module>server</module>
+        <module>client</module>
+        <module>package</module>
+    </modules>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.7.0</version>
+                <configuration>
+                    <release>17</release>
+                </configuration>
+            </plugin>
+            <!-- Pin surefire: unpinned, Maven <= 3.8's super-POM binds a surefire old
+                 enough to lack the JUnit Platform provider, which silently SKIPS the
+                 entire JUnit 5 suite with a green build. Pinning 3.x guarantees the tests
+                 actually run everywhere. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+            </plugin>
+            <!-- 3.2.0 or later honours project.build.outputTimestamp. The default entries
+                 (Built-By among them) are left out: they record the build machine's user. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.4.2</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <addDefaultEntries>false</addDefaultEntries>
+                        </manifest>
+                        <manifestEntries>
+                            <Application-Name>OIE Log Viewer</Application-Name>
+                            <url>https://github.com/diridium-com/oie-log-viewer</url>
+                            <authors>Diridium Technologies Inc.</authors>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

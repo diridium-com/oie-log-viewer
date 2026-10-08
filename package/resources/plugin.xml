@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: MPL-2.0 -->
+<!-- Copyright (c) 2026 Diridium Technologies Inc. -->
+
+<pluginMetaData path="oie-log-viewer">
+    <name>OIE Log Viewer</name>
+    <author>Diridium Technologies Inc.</author>
+    <pluginVersion>${project.version}</pluginVersion>
+    <mirthVersion>${plugin.supported.mc.versions}</mirthVersion>
+    <url>https://github.com/diridium-com/oie-log-viewer</url>
+    <description>View, page through, search and download the engine's log files from the Administrator.</description>
+
+    <clientClasses>
+        <string>com.diridium.logviewer.LogViewerClientPlugin</string>
+    </clientClasses>
+
+    <serverClasses>
+        <string>com.diridium.logviewer.LogViewerServicePlugin</string>
+    </serverClasses>
+
+    <library type="SERVER" path="oie-log-viewer-server-${project.version}.jar" />
+    <library type="SHARED" path="oie-log-viewer-shared-${project.version}.jar" />
+    <library type="CLIENT" path="oie-log-viewer-client-${project.version}.jar" />
+
+    <apiProvider type="SERVLET_INTERFACE" name="com.diridium.logviewer.LogViewerServletInterface" />
+    <apiProvider type="SERVER_CLASS" name="com.diridium.logviewer.LogViewerServlet" />
+</pluginMetaData>

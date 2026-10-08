@@ -1,0 +1,14 @@
+{
+    "name": "oie-log-viewer-webadmin",
+    "version": "1.0.0",
+    "private": true,
+    "type": "module",
+    "description": "Build and tests for the OIE Log Viewer web administrator plugin (compiles web/plugin.jsx to web/plugin.js).",
+    "scripts": {
+        "build": "node build.mjs",
+        "test": "node --test \"web/*.test.mjs\""
+    },
+    "devDependencies": {
+        "esbuild": "^0.28.2"
+    }
+}

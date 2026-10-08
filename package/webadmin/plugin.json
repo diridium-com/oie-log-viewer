@@ -1,0 +1,9 @@
+{
+    "id": "oie-log-viewer",
+    "name": "OIE Log Viewer",
+    "version": "1.0.0",
+    "author": "Diridium Technologies Inc.",
+    "description": "View, page through, search and download the engine's log files.",
+    "oie": { "apiMin": "4.6" },
+    "client": { "entry": "web/plugin.js" }
+}

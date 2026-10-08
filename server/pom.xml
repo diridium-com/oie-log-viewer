@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: MPL-2.0 -->
+<!-- Copyright (c) 2026 Diridium Technologies Inc. -->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <artifactId>oie-log-viewer</artifactId>
+        <groupId>com.diridium</groupId>
+        <version>${revision}</version>
+    </parent>
+
+    <artifactId>oie-log-viewer-server</artifactId>
+    <name>OIE Log Viewer Server</name>
+
+    <properties>
+        <!-- Exactly the version the 4.6.0 release ships in server-lib/log4j/. Log files are
+             discovered from the engine's running log4j configuration, so this must be the
+             engine's copy at runtime (provided), never a second one packed in the plugin. -->
+        <log4j.version>2.25.3</log4j.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.diridium</groupId>
+            <artifactId>oie-log-viewer-shared</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+            <version>${log4j.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-api</artifactId>
+            <version>${log4j.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <!-- The XML pull parser behind XStream's Xpp3Driver, which is what the engine's
+                 serializer uses; 4.6.0 ships this exact jar in server-lib and client-lib.
+                 XStream declares it optional, so tests that round-trip the DTOs the way the
+                 Administrator does must name it. -->
+            <groupId>xpp3</groupId>
+            <artifactId>xpp3</artifactId>
+            <version>1.1.4c</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

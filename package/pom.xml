@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: MPL-2.0 -->
+<!-- Copyright (c) 2026 Diridium Technologies Inc. -->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <artifactId>oie-log-viewer</artifactId>
+        <groupId>com.diridium</groupId>
+        <version>${revision}</version>
+    </parent>
+
+    <artifactId>oie-log-viewer-package</artifactId>
+    <name>OIE Log Viewer Package</name>
+
+    <properties>
+        <versionNumber>${project.version}</versionNumber>
+        <packageName>oie-log-viewer</packageName>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.diridium</groupId>
+            <artifactId>oie-log-viewer-server</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.diridium</groupId>
+            <artifactId>oie-log-viewer-shared</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.diridium</groupId>
+            <artifactId>oie-log-viewer-client</artifactId>
+            <version>${revision}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.2.0</version>
+                <executions>
+                    <execution>
+                        <id>copy-resources</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/to-be-packed</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>resources</directory>
+                                    <filtering>true</filtering>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                    <!-- Web Administrator plugin: copied WITHOUT filtering so
+                         literal ${...} tokens in JavaScript survive. Only the
+                         manifest and the built bundle ship; an include list (not
+                         an exclude list) so a new source file can never leak in. -->
+                    <execution>
+                        <id>copy-webadmin</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/to-be-packed/webadmin</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>webadmin</directory>
+                                    <filtering>false</filtering>
+                                    <includes>
+                                        <include>plugin.json</include>
+                                        <include>web/plugin.js</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Build the web administrator bundle (webadmin/web/plugin.jsx ->
+                 webadmin/web/plugin.js) before it is packaged, then run its tests.
+                 `npm ci` installs exactly what package-lock.json pins. Node is
+                 downloaded into target/, so the first build needs network access
+                 to nodejs.org and registry.npmjs.org. Node 24, as the other Diridium
+                 plugins build with. -->
+            <plugin>
+                <groupId>com.github.eirslett</groupId>
+                <artifactId>frontend-maven-plugin</artifactId>
+                <version>1.15.1</version>
+                <configuration>
+                    <workingDirectory>webadmin</workingDirectory>
+                    <installDirectory>${project.build.directory}</installDirectory>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>install-node-and-npm</id>
+                        <phase>generate-resources</phase>
+                        <goals><goal>install-node-and-npm</goal></goals>
+                        <configuration><nodeVersion>v24.21.0</nodeVersion></configuration>
+                    </execution>
+                    <execution>
+                        <id>npm-ci</id>
+                        <phase>generate-resources</phase>
+                        <goals><goal>npm</goal></goals>
+                        <configuration><arguments>ci</arguments></configuration>
+                    </execution>
+                    <execution>
+                        <id>npm-build-webadmin</id>
+                        <phase>generate-resources</phase>
+                        <goals><goal>npm</goal></goals>
+                        <configuration><arguments>run build</arguments></configuration>
+                    </execution>
+                    <execution>
+                        <id>npm-test-webadmin</id>
+                        <phase>test</phase>
+                        <goals><goal>npm</goal></goals>
+                        <configuration><arguments>test</arguments></configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.0.1</version>
+                <executions>
+                    <execution>
+                        <id>copy-dependencies</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/to-be-packed</outputDirectory>
+                            <includeScope>runtime</includeScope>
+                            <excludeTransitive>false</excludeTransitive>
+                            <overWriteReleases>false</overWriteReleases>
+                            <overWriteSnapshots>false</overWriteSnapshots>
+                            <overWriteIfNewer>true</overWriteIfNewer>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jarsigner-plugin</artifactId>
+                <version>1.4</version>
+                <executions>
+                    <execution>
+                        <id>sign</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>sign</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <skip>${signing.skip}</skip>
+                    <archiveDirectory>${project.build.directory}/to-be-packed</archiveDirectory>
+                    <includes>
+                        <include>oie-log-viewer-*.jar</include>
+                    </includes>
+                    <keystore>${signing.keystore}</keystore>
+                    <storetype>${signing.storetype}</storetype>
+                    <providerClass>${signing.providerClass}</providerClass>
+                    <providerArg>${signing.providerArg}</providerArg>
+                    <alias>${signing.alias}</alias>
+                    <storepass>${signing.storepass}</storepass>
+                    <tsa>${signing.tsa}</tsa>
+                    <arguments>
+                        <argument>-certchain</argument>
+                        <argument>${signing.certchain}</argument>
+                    </arguments>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>3.3.0</version>
+                <executions>
+                    <execution>
+                        <id>package-all</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <configuration>
+                            <finalName>${packageName}-${versionNumber}</finalName>
+                            <appendAssemblyId>false</appendAssemblyId>
+                            <outputDirectory>${project.build.directory}</outputDirectory>
+                            <descriptors>
+                                <descriptor>assembly.xml</descriptor>
+                            </descriptors>
+                            <attach>true</attach>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
