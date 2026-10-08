@@ -142,6 +142,14 @@ class LogFormatEdgeTest {
         return out;
     }
 
+    private static byte[] join(byte[]... parts) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        for (byte[] part : parts) {
+            out.write(part);
+        }
+        return out.toByteArray();
+    }
+
     private static void assertEveryMatchOffsetIsExact(LogFixture fx, byte[] content, byte[] needle, String query,
                                                       int expected, String where) throws Exception {
         LogSearchResult result = fx.service.search(query, false, true, fx.idOf("mirth.log"), null, null);
@@ -171,6 +179,8 @@ class LogFormatEdgeTest {
             utf8(chars(0xFFFD)),           // a real U+FFFD, which is valid
             utf8(chars(0x1F600)),          // a character outside the BMP, two chars in Java
             bytes(0x80, 0x80, 0xE2, 0x41, 0xF0, 0x9F, 0x98, 0x80, 0xC3),
+            // Then multi-byte text: far fewer chars than bytes before the match.
+            join(bytes(0x80), utf8(chars(0x20AC).repeat(8))),
         };
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         for (byte[] prefix : before) {

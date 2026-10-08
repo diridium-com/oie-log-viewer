@@ -453,15 +453,16 @@ final class LogSearcher {
             }
 
             private LogSearchMatch toMatch(String text, int start, int end, boolean partOfLongLine) {
-                int length = text.length();
+                // Chars, not the segment's byte length (the field length), which bytesBefore needs below.
+                int chars = text.length();
                 int from = Math.max(0, start - MAX_LINE_CHARS / 4);
-                int to = Math.min(length, from + MAX_LINE_CHARS);
+                int to = Math.min(chars, from + MAX_LINE_CHARS);
                 from = Math.max(0, to - MAX_LINE_CHARS);
                 // Never cut a surrogate pair: half of one is unrepresentable in XML.
                 if (from > 0 && Character.isLowSurrogate(text.charAt(from))) {
                     from++;
                 }
-                if (to < length && Character.isHighSurrogate(text.charAt(to - 1))) {
+                if (to < chars && Character.isHighSurrogate(text.charAt(to - 1))) {
                     to--;
                 }
                 LogSearchMatch match = new LogSearchMatch();
@@ -473,7 +474,7 @@ final class LogSearcher {
                 match.setLineText(LogText.sanitize(text.substring(from, to)));
                 match.setMatchStart(Math.max(0, start - from));
                 match.setMatchEnd(Math.max(0, Math.min(end, to) - from));
-                match.setTruncated(from > 0 || to < length || partOfLongLine);
+                match.setTruncated(from > 0 || to < chars || partOfLongLine);
                 return match;
             }
         }
