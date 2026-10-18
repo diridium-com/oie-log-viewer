@@ -71,9 +71,11 @@ throughout.
 
 | Attribute | Value |
 |-----------|-------|
-| OIE version | 4.6.0 (the engine loads an extension only on the version it was built for) |
-| Java | 17 |
-| Web Administrator | The [Web Support](https://github.com/gibson9583/oie-web-support-plugin) plugin, which serves extension UIs from the engine |
+| OIE version | 4.7.0 (the engine loads an extension only on the version it was built for) |
+| Java | 17 or 21 |
+| Web Administrator | The [Web Support](https://github.com/gibson9583/oie-web-support-plugin) plugin, in a release for the same OIE version, which serves extension UIs from the engine |
+
+Running OIE 4.6.0? Use [OIE Log Viewer 1.0.0](https://github.com/diridium-com/oie-log-viewer/releases/tag/v1.0.0).
 
 ## Installation
 
@@ -97,6 +99,14 @@ The script installs the four OIE 4.6.0 engine jars the plugin compiles against i
 Maven repository, taken from the published OIE 4.6.0 distribution and cached under
 `~/.cache/oie-dist`. The first build downloads Node.js to build the web administrator UI. The
 installable zip is `package/target/oie-log-viewer-<version>.zip`.
+
+Version 1.1.0 is built for OIE 4.7.0 but compiles against the 4.6.0 jars, because 4.7.0 had not
+been published when it was released; [docs/design-notes.md](docs/design-notes.md) explains why
+that is safe and when it changes.
+
+CI also runs `e2e/run.py`, which installs the zip into the released engine through its own
+installer and uses the plugin on each database the engine supports. Its docstring says how to run
+it locally.
 
 ## Credits
 

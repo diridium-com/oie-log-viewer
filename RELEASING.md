@@ -1,8 +1,7 @@
 # Releasing
 
 A release is built twice: CI builds an unsigned copy and stages it as a draft release, then the
-signed copy is built on the Mac that holds the YubiKey and replaces it. Nothing is published
-automatically.
+signed copy is built with the YubiKey and replaces it. Nothing is published automatically.
 
 ## 1. Before tagging
 
@@ -19,6 +18,9 @@ automatically.
   built for (`ExtensionLoader.isExtensionCompatible`), and the store listing is capped with
   `maxEngineVersion` for that reason. Check log file discovery on the new engine before releasing:
   it reads the engine's log4j configuration.
+  Before the new engine is published, leave `mc.version` and `oie.dist.sha256` on the previous
+  engine and set `plugin.supported.mc.versions` to the new one instead (see the comment above it in
+  `pom.xml`). `oie.json`'s range must equal it; the release workflow checks.
 - **Build and test:** `mvn -B -ntp clean package`, never with `-DskipTests`, and check that
   surefire report files were written. The expected warnings are listed in
   [docs/design-notes.md](docs/design-notes.md).
@@ -33,8 +35,9 @@ git tag vX.Y.Z
 git push origin vX.Y.Z
 ```
 
-`release.yml` checks that the tag matches all five version files (naming any that do not), refuses
-a tag whose release is already published, builds and runs the tests, and creates a **draft**
+`release.yml` checks that the tag matches all five version files (naming any that do not) and that
+`oie.json`'s engine range is the engine `plugin.xml` names, refuses a tag whose release is already
+published, builds and runs the tests, and creates a **draft**
 release with the unsigned `oie-log-viewer-X.Y.Z.zip` and its `.sha256`.
 
 Pushing a tag the remote already has does nothing. To rebuild a draft, delete the draft release and
@@ -42,31 +45,45 @@ the remote tag, then tag and push again. **Never re-run the workflow or re-push 
 has put the signed files on the draft:** the rebuild uploads the unsigned files over them. Only a
 published release is refused.
 
-## 3. Build and sign on the Mac
+## 3. Build and sign
+
+Where the YubiKey is, check out the tag exactly, with no local changes, so the signed zip is built
+from what CI tested:
 
 ```
-git clone https://github.com/diridium-com/oie-log-viewer.git
-cd oie-log-viewer
-git checkout vX.Y.Z
-./scripts/install-engine-jars.sh
-# yubikey-pkcs11.cfg and certchain.pem go in this directory, as for the other plugins:
-# the signing profile reads them from the directory Maven runs in.
-YUBIKEY_PIN=... mvn -B -ntp -Psigning clean package
+git fetch --tags --force && git checkout vX.Y.Z
+git status --porcelain                 # must print nothing
+git describe --exact-match --tags      # must print vX.Y.Z
+./scripts/install-engine-jars.sh       # once per engine version
 ```
 
-**Copy the signed zip out of `package/target` straight away.** The next `mvn clean`, anyone's,
-deletes it, and it cannot be rebuilt without the key.
+`yubikey-pkcs11.cfg` and `certchain.pem` go in the repo root, as for the other plugins (both are
+gitignored): the signing profile reads them from the directory Maven runs in. Then:
 
-Then make its checksum file and check the signatures:
+```
+read -rs PIN
+mvn -B -ntp -Psigning clean package -Dsigning.storepass="$PIN"
+unset PIN
+```
+
+`read -s` takes the PIN without echoing it or leaving it in your shell history. The variable isn't
+exported, so only Maven gets the PIN, not the processes the build starts (npm and the install
+scripts it runs).
+
+**Leave the signed zip in `package/target` and run no other build in this checkout until step 5 is
+done.** The next `mvn clean`, anyone's, deletes it, and it cannot be rebuilt without the key.
+
+Then, in `package/target`, make its checksum file and check the signatures:
 
 ```
 shasum -a 256 oie-log-viewer-X.Y.Z.zip > oie-log-viewer-X.Y.Z.zip.sha256
-unzip -o -d check oie-log-viewer-X.Y.Z.zip
-for j in check/oie-log-viewer/*.jar; do jarsigner -verify "$j"; done
+mkdir check-X.Y.Z && unzip -q oie-log-viewer-X.Y.Z.zip -d check-X.Y.Z
+for j in check-X.Y.Z/oie-log-viewer/*.jar; do jarsigner -verify -strict "$j" || echo "NOT SIGNED: $j"; done
 ```
 
-Each jar should report "jar verified". (`shasum -a 256` writes the same `<hash>  <name>` line as
-`sha256sum`, which macOS does not ship by default.)
+Each jar should report "jar verified.". The `mkdir` fails if the folder already exists, so an
+earlier release's jars can't get mixed in. (`shasum -a 256` writes the same `<hash>  <name>` line
+as `sha256sum`, which macOS does not ship by default.)
 
 ## 4. Replace the draft's files and publish
 

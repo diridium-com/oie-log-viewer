@@ -229,3 +229,52 @@ No tests are skipped.
 - **Very large logs** were exercised up to tens of megabytes. The 64 MB line-numbering limit has no
   test, and the 1 GB archive limit is tested only for a page offset past it, not by reading an
   archive that large.
+
+## Built for OIE 4.7.0 before its release (2026-10-18)
+
+- **1.1.0 says 4.7.0 in `plugin.xml` but compiles against the 4.6.0 engine jars.** 4.7.0 had not
+  been published, and a public build can't download an unpublished engine. `mc.version` and
+  `oie.dist.sha256` stay on 4.6.0, and `plugin.supported.mc.versions` names 4.7.0. This is safe
+  because the zip holds none of the engine's jars, and because a comparison of the 4.6.0
+  distribution with the 4.7.0 build (engine commit `f9ba73e28`, tarball SHA-256
+  `ab08558873dc6be1e474afaacc46efe94d29c945cd3381c10d0ae548ecb429de`) found every engine class the
+  plugin uses still there. The first release after 4.7.0 is published sets `mc.version` to 4.7.0
+  and `plugin.supported.mc.versions` back to `${mc.version}`.
+- **log4j is pinned to 4.7.0's 2.26.1** (4.6.0 ships 2.25.3). It is the one library the plugin uses
+  that 4.7.0 changed, and log file discovery depends on it. It comes from Maven Central, not the
+  engine distribution, so the build compiles and tests against 4.7.0's log4j even while the engine
+  jars are 4.6.0's.
+- **servlet-api and slf4j moved down, to 3.1.0 and 1.7.30**, the versions both engines ship. 1.0.0
+  compiled against 4.0.1 and 1.7.32, newer than anything the plugin runs against; it used nothing
+  that the shipped versions lack, which the build now shows.
+- **CI's end-to-end tests run on 4.6.0, with the zips relabelled.** CI can't download 4.7.0, so it
+  installs copies of the zips whose `plugin.xml` says 4.6.0 on the engine the plugin compiles
+  against, and the run summary says which zips were relabelled. Once `mc.version` is 4.7.0 the
+  relabelling stops by itself. The same tests ran against the 4.7.0 build above before the
+  release: all six databases on Java 17 (Zulu 17.0.17) and 21 (Temurin 21.0.12), 61 checks each,
+  none failed, with the 1.0.0 upgrade taken across the engine upgrade from 4.6.0.
+
+## What the end-to-end tests cover (2026-10-18)
+
+`e2e/run.py` installs the zip into the released engine through its own installer and uses the
+plugin over its REST API. It replaces "There is no automated test against a running engine"
+(2026-10-06).
+
+- **fresh:** known log files are written before the engine first starts, and every endpoint is
+  checked against them on disk: the list (found through log4j), a first page (HL7's lone CRs survive
+  the XML the Swing Administrator reads), a last page, plain, case-insensitive and regular
+  expression searches, a count over every file, both downloads byte for byte, and an event for each
+  request.
+- **upgrade:** 1.0.0, then this build installed over it. On a newer engine than 1.0.0's, the engine is
+  upgraded under 1.0.0 first, and the test checks the engine reports 1.0.0 as not compatible.
+- **rbac:** Role Based Access Control installed alongside, with four roles. A role limited to any
+  channels is refused by the plugin itself, so that role names a channel id the engine doesn't need
+  to have. rbac logs a warning for each request it refuses, and the test checks they are exactly
+  the requests a role lacked the permission for.
+- **Six databases, though the plugin has no tables:** the engine runs on each, and the plugin must
+  load and work on all of them.
+
+Still not covered by any automated test: the two user interfaces ([release-checks.md](release-checks.md)
+covers them by hand), the 409 stale and 429 busy statuses, Windows engines, very large logs, and log4j
+configurations other than the engine's shipped one (archives in date folders are covered by unit
+tests).

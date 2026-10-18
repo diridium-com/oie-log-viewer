@@ -6,13 +6,14 @@
 #
 #   git tag v1.0.0 && git push origin v1.0.0
 #
-# CI never publishes. From here (RELEASING.md): build and sign on the Mac,
+# CI never publishes. From here (RELEASING.md): build and sign with the YubiKey,
 # replace the draft's zip AND its .sha256 with the signed ones, and publish by
 # hand.
 #
-# The tag must match the version in all five files that carry it, and a tag
-# whose release is already published is refused, so re-running this workflow
-# can never replace a published release's files with an unsigned build.
+# The tag must match the version in all five files that carry it, oie.json's
+# engine range must be the engine plugin.xml names, and a tag whose release is
+# already published is refused, so re-running this workflow can never replace a
+# published release's files with an unsigned build.
 
 name: Release
 
@@ -74,6 +75,16 @@ jobs:
           check "package/webadmin/package-lock.json version" "$(jq -r .version package/webadmin/package-lock.json)"
           check "package/webadmin/package-lock.json packages[\"\"].version" \
             "$(jq -r '.packages[""].version' package/webadmin/package-lock.json)"
+          # The engine loads a plugin only on the exact version in plugin.xml's mirthVersion (the
+          # pom's plugin.supported.mc.versions), so the store listing must say exactly that version too.
+          ENGINE="$(mvn -q -N "$HELP:evaluate" -Dexpression=plugin.supported.mc.versions -DforceStdout)"
+          for field in minEngineVersion maxEngineVersion; do
+            got="$(jq -r ".$field" oie.json)"
+            if [ "$got" != "$ENGINE" ]; then
+              echo "::error::oie.json $field is '${got}', but the plugin is built for OIE ${ENGINE} (pom.xml plugin.supported.mc.versions), the only version the engine will load it on."
+              FAILED=1
+            fi
+          done
           if [ "$FAILED" -ne 0 ]; then
             echo "Set the version in every file listed above (RELEASING.md, step 1) and tag again."
             exit 1
@@ -122,8 +133,8 @@ jobs:
           echo "asset=${ASSET}" >> "$GITHUB_OUTPUT"
 
       - name: Create DRAFT GitHub Release with assets
-        # Stays a draft: the zip is unsigned. A human signs on the Mac, replaces the
-        # zip and its .sha256, and publishes. Pinned to v2.6.2 by commit.
+        # Stays a draft: the zip is unsigned. A human signs with the YubiKey, replaces
+        # the zip and its .sha256, and publishes. Pinned to v2.6.2 by commit.
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65
         with:
           draft: true

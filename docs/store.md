@@ -26,9 +26,9 @@ log.
 
 ## Requirements
 
-- Open Integration Engine **4.6.0**.
+- Open Integration Engine **4.7.0**. For 4.6.0, use version 1.0.0.
 - An engine restart after install to activate the plugin.
-- For the web administrator: the **Web Support** plugin.
+- For the web administrator: the **Web Support** plugin, in a release for the same OIE version.
 
 ## Installing
 
