@@ -1,6 +1,6 @@
 {
     "name": "oie-log-viewer-webadmin",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "private": true,
     "type": "module",
     "description": "Build and tests for the OIE Log Viewer web administrator plugin (compiles web/plugin.jsx to web/plugin.js).",

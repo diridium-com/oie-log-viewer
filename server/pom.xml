@@ -16,10 +16,10 @@
     <name>OIE Log Viewer Server</name>
 
     <properties>
-        <!-- Exactly the version the 4.6.0 release ships in server-lib/log4j/. Log files are
-             discovered from the engine's running log4j configuration, so this must be the
+        <!-- Exactly the version OIE 4.7.0 ships in server-lib/log4j/ (2.25.3 in 4.6.0). Log files
+             are discovered from the engine's running log4j configuration, so this must be the
              engine's copy at runtime (provided), never a second one packed in the plugin. -->
-        <log4j.version>2.25.3</log4j.version>
+        <log4j.version>2.26.1</log4j.version>
     </properties>
 
     <dependencies>
