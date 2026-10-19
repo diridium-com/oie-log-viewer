@@ -37,7 +37,8 @@ git push origin vX.Y.Z
 
 `release.yml` checks that the tag matches all five version files (naming any that do not) and that
 `oie.json`'s engine range is the engine `plugin.xml` names, refuses a tag whose release is already
-published, builds and runs the tests, and creates a **draft**
+published, waits for the tagged commit's Build run on `main` and refuses the tag unless every job
+in it passed, the end-to-end tests included, builds and runs the tests, and creates a **draft**
 release with the unsigned `oie-log-viewer-X.Y.Z.zip` and its `.sha256`.
 
 Pushing a tag the remote already has does nothing. To rebuild a draft, delete the draft release and
@@ -70,6 +71,10 @@ unset PIN
 exported, so only Maven gets the PIN, not the processes the build starts (npm and the install
 scripts it runs).
 
+The signing profile also takes the PIN from a `YUBIKEY_PIN` environment variable when
+`-Dsigning.storepass` isn't given. Don't use it: an exported variable reaches every process the
+build starts.
+
 **Leave the signed zip in `package/target` and run no other build in this checkout until step 5 is
 done.** The next `mvn clean`, anyone's, deletes it, and it cannot be rebuilt without the key.
 
@@ -78,7 +83,7 @@ Then, in `package/target`, make its checksum file and check the signatures:
 ```
 shasum -a 256 oie-log-viewer-X.Y.Z.zip > oie-log-viewer-X.Y.Z.zip.sha256
 mkdir check-X.Y.Z && unzip -q oie-log-viewer-X.Y.Z.zip -d check-X.Y.Z
-for j in check-X.Y.Z/oie-log-viewer/*.jar; do jarsigner -verify -strict "$j" || echo "NOT SIGNED: $j"; done
+for j in check-X.Y.Z/oie-log-viewer/*.jar; do jarsigner -verify -strict "$j" || echo "FAILED: $j"; done
 ```
 
 Each jar should report "jar verified.". The `mkdir` fails if the folder already exists, so an
@@ -102,7 +107,7 @@ Write the release notes, then publish the draft by hand. Release notes:
 
 ## 5. Check the published release
 
-Download the published zip, check it against its `.sha256`, and run `jarsigner -verify` on its jars
+Download the published zip, check it against its `.sha256`, and run `jarsigner -verify -strict` on its jars
 again. A published release's files are never replaced: if something is wrong, release a new
 version. An unpublished draft can be deleted and re-tagged under the same version.
 

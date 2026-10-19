@@ -1,4 +1,4 @@
 # Releases the upgrade scenario starts from, one per line: version, SHA-256 of the zip, download URL.
 # A release built for an older engine than the zip under test starts on that engine (engines.txt).
-# 1.0.0: the current signed release, for OIE 4.6.0.
+# 1.0.0: the signed release for OIE 4.6.0.
 1.0.0 85bfcbc00eb0c7453b3577edfdfd82b72d33e6cdfd89d44cb4d45c98af393ae1 https://github.com/diridium-com/oie-log-viewer/releases/download/v1.0.0/oie-log-viewer-1.0.0.zip
