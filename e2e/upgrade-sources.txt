@@ -2,3 +2,5 @@
 # A release built for an older engine than the zip under test starts on that engine (engines.txt).
 # 1.0.0: the signed release for OIE 4.6.0.
 1.0.0 85bfcbc00eb0c7453b3577edfdfd82b72d33e6cdfd89d44cb4d45c98af393ae1 https://github.com/diridium-com/oie-log-viewer/releases/download/v1.0.0/oie-log-viewer-1.0.0.zip
+# 1.1.0: the signed release for OIE 4.7.0.
+1.1.0 c0c1579f1651dfb5a65d2763b297685383c96894ba708a0e08acd058aeef34ba https://github.com/diridium-com/oie-log-viewer/releases/download/v1.1.0/oie-log-viewer-1.1.0.zip
