@@ -3,6 +3,7 @@
 
 """Minimal OIE REST client for the end-to-end tests. Standard library only."""
 
+import http.client
 import http.cookiejar
 import ssl
 import time
@@ -58,7 +59,7 @@ class Api:
                                             content_type="application/x-www-form-urlencoded")
                 if status == 200 and "SUCCESS" in text:
                     return
-            except OSError:
+            except (OSError, http.client.HTTPException):   # not listening yet, or a half-started server
                 pass
             if not alive():
                 raise ApiError("the engine exited or gave up on startup before it accepted a login; see its mirth.log")
@@ -73,14 +74,7 @@ class Api:
             raise ApiError(f"{method} {path} -> HTTP {status}: {text[:300]}")
         return ET.fromstring(text) if text.strip() else None
 
-    def text(self, path, query=None):
-        """GET for an endpoint that returns a String. Returns (status, string)."""
-        status, text = self.request("GET", path, query=query)
-        if status == 200 and text.lstrip().startswith("<string"):
-            return status, ET.fromstring(text).text or ""
-        return status, text
-
-    def multipart(self, path, parts, query=None):
+    def multipart(self, path, parts):
         """POST multipart/form-data. parts: list of (name, filename or None, content type, bytes or str)."""
         boundary = "----lv-e2e-" + uuid.uuid4().hex
         chunks = []
@@ -92,4 +86,4 @@ class Api:
             chunks.append(b"\r\n")
         chunks.append(f"--{boundary}--\r\n".encode("utf-8"))
         return self.request("POST", path, b"".join(chunks),
-                            content_type=f"multipart/form-data; boundary={boundary}", query=query)
+                            content_type=f"multipart/form-data; boundary={boundary}")

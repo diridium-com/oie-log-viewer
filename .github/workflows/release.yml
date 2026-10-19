@@ -24,6 +24,7 @@ on:
 
 permissions:
   contents: write        # required to create the GitHub Release
+  actions: read          # to find the tagged commit's Build run
 
 jobs:
   release:
@@ -55,6 +56,38 @@ jobs:
             echo "::error::Could not check for an existing release: $DRAFT"
             exit 1
           fi
+
+      # Only a commit whose Build run on main passed, e2e jobs included, becomes a release. A tag
+      # pushed right after the merge waits for that run (tags don't start one of their own).
+      - name: Wait for the tagged commit's Build run to pass
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for i in $(seq 1 120); do
+            RUN="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/build.yml/runs?head_sha=${GITHUB_SHA}&event=push&branch=main" \
+              --jq '.workflow_runs[0] | select(. != null) | "\(.status) \(.conclusion) \(.html_url)"')"
+            if [ -z "$RUN" ]; then
+              if [ "$i" -ge 10 ]; then
+                echo "::error::No Build run on main for ${GITHUB_SHA}. Tag a commit on main whose Build run passed."
+                exit 1
+              fi
+              echo "No Build run on main for ${GITHUB_SHA} yet; waiting."
+            else
+              read -r STATUS CONCLUSION URL <<< "$RUN"
+              if [ "$STATUS" = "completed" ]; then
+                if [ "$CONCLUSION" = "success" ]; then
+                  echo "Build passed for ${GITHUB_SHA}: ${URL}"
+                  exit 0
+                fi
+                echo "::error::The Build run for ${GITHUB_SHA} finished as '${CONCLUSION}': ${URL}"
+                exit 1
+              fi
+              echo "The Build run for ${GITHUB_SHA} is ${STATUS}; waiting. ${URL}"
+            fi
+            sleep 30
+          done
+          echo "::error::The Build run for ${GITHUB_SHA} did not finish within 60 minutes."
+          exit 1
 
       - name: Check the tag against every version file
         id: ver

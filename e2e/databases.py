@@ -3,9 +3,10 @@
 
 """One database server per run, in Docker, with a new database (or Oracle user) per scenario.
 
-Containers are named E2E_NAME_PREFIX-<kind>-db (default prefix lv-e2e) and carry the label
-lv-e2e=1 plus any k=v pairs in E2E_DOCKER_LABELS (comma separated). The port is published
-on 127.0.0.1 and picked by Docker. stop() removes only the container this run started.
+Containers are named E2E_NAME_PREFIX-<kind>-db (default prefix lv-e2e-<process id>, so a container
+a killed run left behind can't block the next run) and carry the label lv-e2e=1 plus any k=v pairs
+in E2E_DOCKER_LABELS (comma separated). The port is published on 127.0.0.1 and picked by Docker.
+stop() removes only the container this run started, and says so if it can't.
 """
 
 import os
@@ -48,7 +49,7 @@ class Database:
     def start(self):
         if self.kind == "derby":
             return
-        prefix = os.environ.get("E2E_NAME_PREFIX", "lv-e2e")
+        prefix = os.environ.get("E2E_NAME_PREFIX", f"lv-e2e-{os.getpid()}")
         labels = ["--label", "lv-e2e=1"]
         for pair in filter(None, os.environ.get("E2E_DOCKER_LABELS", "").split(",")):
             labels += ["--label", pair.strip()]
@@ -90,7 +91,9 @@ class Database:
 
     def stop(self):
         if self.container:
-            docker("rm", "-f", "-v", self.container, check=False)
+            result = docker("rm", "-f", "-v", self.container, check=False)
+            if result.returncode != 0:
+                print(f"WARNING: could not remove container {self.container}: {result.stderr.strip()[:300]}", flush=True)
             self.container = None
 
     # ---------- per-scenario databases
@@ -130,16 +133,16 @@ class Database:
 
     # ---------- SQL through each image's own client
 
-    def _sql(self, sql, database=None, check=True):
+    def _sql(self, sql, check=True):
         if self.server == "postgres":
-            cmd = ["psql", "-U", "oie", "-d", database or "postgres", "-v", "ON_ERROR_STOP=1", "-tAc", sql]
+            cmd = ["psql", "-U", "oie", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-tAc", sql]
         elif self.server == "mysql":
-            cmd = ["mysql", "-uroot", f"-p{PASSWORD}", "-N", "-e", sql] + ([database] if database else [])
+            cmd = ["mysql", "-uroot", f"-p{PASSWORD}", "-N", "-e", sql]
         elif self.server == "sqlserver":
             cmd = ["/opt/mssql-tools18/bin/sqlcmd", "-C", "-b", "-S", "localhost", "-U", "sa", "-P", PASSWORD,
-                   "-h", "-1", "-W", "-Q", "SET NOCOUNT ON; " + sql] + (["-d", database] if database else [])
+                   "-h", "-1", "-W", "-Q", "SET NOCOUNT ON; " + sql]
         else:
-            login = f"{database}/\"{PASSWORD}\"" if database else f"system/\"{PASSWORD}\""
+            login = f"system/\"{PASSWORD}\""
             script = f"WHENEVER SQLERROR EXIT FAILURE\nSET HEADING OFF FEEDBACK OFF PAGESIZE 0\n{sql}\nEXIT\n"
             result = subprocess.run(["docker", "exec", "-i", self.container, "sqlplus", "-s",
                                      f"{login}@//localhost:1521/FREEPDB1"],

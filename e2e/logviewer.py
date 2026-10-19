@@ -4,6 +4,7 @@
 """The plugin's REST calls, the engine and rbac calls the scenarios share, and the known log files
 the fresh scenario reads."""
 
+import json
 import os
 import re
 import subprocess
@@ -132,6 +133,61 @@ def plugin_events(api, limit=50):
             attributes = {entry[0].text: (entry[1].text or "").strip() for entry in event.iter("entry")}
             found.append((name[:-len(EVENT_SUFFIX)], attributes))
     return found
+
+
+# ---------- the same answers as JSON, the form the web administrator asks for
+
+def _json(api, path, query=None):
+    status, text = api.request("GET", EXT + path, query=query, accept="application/json")
+    if status != 200:
+        raise ApiError(f"GET {EXT}{path} as JSON -> HTTP {status}: {text[:300]}")
+    return json.loads(text)
+
+
+def _keys(value):
+    return [k for k in value if not k.startswith("@")]
+
+
+def _root(raw, field):
+    """raw, or the object in its single wrapper key when `field` isn't at the top (root in log-core.js)."""
+    if isinstance(raw, dict) and field not in raw and len(_keys(raw)) == 1 and isinstance(raw[_keys(raw)[0]], dict):
+        return raw[_keys(raw)[0]]
+    return raw
+
+
+def _scalar(value):
+    """A value XStream may have wrapped in a single key (scalar in log-core.js)."""
+    while isinstance(value, dict) and len(_keys(value)) == 1:
+        value = value[_keys(value)[0]]
+    return value
+
+
+def _list_of(value, item):
+    """The elements of an XStream list: an array, one bare object, or "" when empty (listOf in log-core.js)."""
+    if value is None or value == "":
+        return []
+    if isinstance(value, list):
+        return value
+    if not isinstance(value, dict):
+        return [value]
+    if not _keys(value):
+        return []
+    if len(_keys(value)) == 1 and _keys(value)[0].split(".")[-1].lower() == item.lower():
+        inner = value[_keys(value)[0]]
+        return [] if inner is None or inner == "" else inner if isinstance(inner, list) else [inner]
+    return [value]
+
+
+def files_json(api):
+    """The file list as JSON: {name: id}."""
+    r = _root(_json(api, "/files"), "files")
+    return {str(_scalar(f.get("name"))): str(_scalar(f.get("id"))) for f in _list_of(r.get("files"), "LogFileInfo")}
+
+
+def page_json(api, file_id, anchor):
+    """A page as JSON: (start offset, end offset, text)."""
+    r = _root(_json(api, "/page", {"fileId": file_id, "anchor": anchor}), "startOffset")
+    return int(_scalar(r["startOffset"])), int(_scalar(r["endOffset"])), str(_scalar(r.get("text")) or "")
 
 
 # ---------- known log files

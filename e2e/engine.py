@@ -10,7 +10,6 @@ import signal
 import socket
 import subprocess
 import tarfile
-import time
 import xml.etree.ElementTree as ET
 import zipfile
 
@@ -30,9 +29,6 @@ def free_ports(count):
             s.close()
 
 
-def free_port():
-    return free_ports(1)[0]
-
 
 def unpack(tarball, dest):
     """Unpacks the distribution once; each scenario copies this pristine tree."""
@@ -47,6 +43,16 @@ def mirth_version(zip_path):
     with zipfile.ZipFile(zip_path) as z:
         name = next(n for n in z.namelist() if re.fullmatch(r"[^/]+/plugin\.xml", n))
         return ET.fromstring(z.read(name)).findtext("mirthVersion")
+
+
+def java_version(java_home):
+    """The version a JDK's release file names (JAVA_VERSION), the string the engine logs at startup, or None."""
+    try:
+        with open(os.path.join(java_home, "release"), encoding="utf-8") as f:
+            m = re.search(r'^JAVA_VERSION="([^"]+)"', f.read(), re.M)
+    except OSError:
+        return None
+    return m.group(1) if m else None
 
 
 def relabel(zip_path, version, dest):
@@ -71,7 +77,7 @@ def set_properties(path, values):
     for key, value in values.items():
         for i, line in enumerate(lines):
             stripped = line.lstrip("#").strip()
-            if stripped.startswith(key + " =") or stripped == key + " =":
+            if stripped.startswith(key + " ="):
                 lines[i] = f"{key} = {value}"
                 break
         else:
@@ -88,7 +94,7 @@ class Engine:
         self.process = None
         self.console = None
         self.last_start_lost_port = False
-        self.port = free_port()
+        self.port = None   # set by configure() or upgrade_to()
         self.starts = 0
         # Stock OIE logs only ERROR. The plugin logs at WARN when it can't discover an appender's
         # files or read a file, and the tests read those lines, so the plugin's package is turned up here.
@@ -179,10 +185,6 @@ class Engine:
             self.console.close()
             self.console = None
 
-    def restart(self):
-        self.stop()
-        return self.start()
-
     def log(self):
         """All of mirth.log: the parts rolled over at 500 KB (mirth.log.<n>.zip, oldest first), then the live file."""
         logs = os.path.join(self.home, "logs")
@@ -202,7 +204,10 @@ class Engine:
     # mirth.log's layout: "%-5p %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c: %m".
     LINE = re.compile(r"^(\S+)\s+\S+ \S+ \[.*?\] (\S+): (.*)$")
     PLUGIN_LOGGER = "com.diridium.logviewer."
-    PLUGIN_NAMES = ("oie-log-viewer", "OIE Log Viewer")
+    # The plugin's id and name, and its package for an engine line about one of its classes (a class that failed to load).
+    PLUGIN_NAMES = ("oie-log-viewer", "OIE Log Viewer", "com.diridium.logviewer")
+    # Logged at each start: "Running OpenJDK 64-Bit Server VM 21.0.12.1 on Linux (...)".
+    JAVA_LINE = re.compile(r"Running .* VM (\S+) on ")
 
     def plugin_log_lines(self, levels, since=0):
         """Lines the plugin logged at the given levels, and lines the engine logged about the plugin,
@@ -216,6 +221,10 @@ class Engine:
             if logger.startswith(self.PLUGIN_LOGGER) or any(name in message for name in self.PLUGIN_NAMES):
                 found.append(line)
         return found
+
+    def java_versions_logged(self, since=0):
+        """The Java version of each engine start logged from character `since` of the log on."""
+        return [m.group(1) for m in map(self.JAVA_LINE.search, self.log()[since:].splitlines()) if m]
 
     def extension_files(self, name):
         folder = os.path.join(self.home, "extensions", name)

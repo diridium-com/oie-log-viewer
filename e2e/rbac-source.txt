@@ -1,3 +1,4 @@
 # The rbac (role-based-access-control) release the rbac scenario installs alongside the plugin:
-# version, SHA-256 of the zip, download URL. rbac must be built for the same engine version.
+# version, SHA-256 of the zip, download URL. rbac must be built for the same engine version as the zip
+# under test; with --label-as, both are relabelled.
 1.2.0 b622861432b16739bd2c9b94e30ba529ecf6c343addbe91ed57cfe53646f3488 https://github.com/diridium-com/role-based-access-control/releases/download/v1.2.0/rbac-1.2.0.zip

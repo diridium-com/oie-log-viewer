@@ -7,8 +7,13 @@
         --tarball oie_unix_4_6_0.tar.gz --work /tmp/lv-e2e-1
 
 Databases: derby, postgres, mysql, sqlserver (jTDS driver), sqlserver-ms (Microsoft driver), oracle.
-Needs Java 17 (JAVA_HOME or --java-home) for the engine and Docker for every database but Derby.
+Needs Java 17 or 21 (JAVA_HOME or --java-home) for the engine, Docker for every database but Derby,
+and a Python whose tarfile has the data extraction filter (3.12, or a recent patch release of
+an older line; 3.10.12 has it).
 --work must not exist yet; the run leaves each engine and its logs there.
+E2E_NAME_PREFIX names the database container (default lv-e2e-<process id>), and E2E_DOCKER_LABELS
+adds k=v labels to it, comma separated. On a shared Docker host, set both so the container says
+who started it.
 
 Scenarios: fresh (the plugin used the way an administrator uses it, on log files written before
 the engine starts), one upgrade per entry in upgrade-sources.txt, and rbac (the release in
@@ -18,13 +23,17 @@ installing the zip under test. Each download is checked against its pinned SHA-2
 
 --label-as VERSION installs copies of the zips whose plugin.xml says mirthVersion VERSION, for a
 release built for an engine that isn't published yet: CI then runs it on the engine it compiles
-against (the POM's mc.version). The summary says which zips were relabelled.
+against (the POM's mc.version). Only zips built for the same engine as the zip under test are
+relabelled (rbac's, for one); an older release keeps its own engine, so its upgrade still starts
+there. The summary says which zips were relabelled.
 Exit status 1 if any check failed.
 """
 
 import argparse
 import hashlib
+import http.client
 import os
+import signal
 import sys
 import time
 import traceback
@@ -51,9 +60,17 @@ def sources(name):
     return found
 
 
-def download(url, digest, dest):
-    with urllib.request.urlopen(url, timeout=300) as resp:
-        data = resp.read()
+def download(url, digest, dest, attempts=3):
+    """Fetches url, retrying a failed fetch; a hash mismatch fails at once."""
+    for attempt in range(1, attempts + 1):
+        try:
+            with urllib.request.urlopen(url, timeout=300) as resp:
+                data = resp.read()
+            break
+        except (OSError, http.client.HTTPException):
+            if attempt == attempts:
+                raise
+            time.sleep(10 * attempt)
     got = hashlib.sha256(data).hexdigest()
     if got != digest:
         raise RuntimeError(f"{url}: SHA-256 {got} does not match the pinned {digest}")
@@ -72,6 +89,9 @@ def main():
     parser.add_argument("--scenarios", default="all", help="comma separated: fresh, upgrade-<version>, rbac")
     parser.add_argument("--label-as", help="install the zips relabelled for this engine version")
     args = parser.parse_args()
+    # Stopped by SIGTERM (a CI timeout, a kill): exit through the finally blocks, which stop the engines and
+    # remove the database container, rather than leave them running.
+    signal.signal(signal.SIGTERM, lambda signum, frame: sys.exit(128 + signum))
 
     plan = [("fresh", scenarios.fresh, {})]
     for version, digest, url in sources("upgrade-sources.txt"):
@@ -92,10 +112,13 @@ def main():
     os.makedirs(os.path.join(args.work, "relabelled"))
     relabelled = []
 
+    target = mirth_version(args.zip)
+
     def labelled(zip_path):
-        """The zip itself, or with --label-as a copy relabelled for that engine version."""
+        """The zip itself, or with --label-as a copy relabelled for that engine version. Only a zip built for the
+        target engine (the zip under test's) is relabelled: an older release keeps its engine and its upgrade path."""
         built_for = mirth_version(zip_path)
-        if not args.label_as or built_for == args.label_as:
+        if not args.label_as or built_for != target or built_for == args.label_as:
             return zip_path
         relabelled.append(f"{os.path.basename(zip_path)} (built for OIE {built_for})")
         return relabel(zip_path, args.label_as, os.path.join(args.work, "relabelled", os.path.basename(zip_path)))

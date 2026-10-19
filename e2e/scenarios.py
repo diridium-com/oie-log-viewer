@@ -14,6 +14,7 @@ import uuid
 import zipfile
 
 import logviewer as lv
+from engine import java_version
 from oie import Api
 
 QUERY = "Caused by: java.net.ConnectException"
@@ -54,8 +55,8 @@ def start(engine):
 
 
 def check_quiet(r, engine, since, when):
-    bad = engine.plugin_log_lines(("WARN", "ERROR"), since)
-    r.check(f"no WARN or ERROR from or about the plugin {when}", not bad, " | ".join(bad)[:600])
+    bad = engine.plugin_log_lines(("WARN", "ERROR", "FATAL"), since)
+    r.check(f"no WARN, ERROR or FATAL from or about the plugin {when}", not bad, " | ".join(bad)[:600])
 
 
 def check_loaded(r, api, zip_path, what):
@@ -103,14 +104,25 @@ def use_the_viewer(r, api, engine):
     r.check("mirth.log's last page is the file's bytes at the page's offsets, up to its end",
             tail["atEnd"] == "true" and e > s and data[s:e].decode("utf-8") == tail["text"], f"{s}-{e} of {len(data)}")
 
+    # The web administrator asks for JSON. It must carry what the XML does, line ends included. The active file's
+    # id is left out: it may change as the engine writes to it.
+    as_json = lv.files_json(api)
+    r.check("the file list as JSON names the same files, and the archives by the same ids",
+            sorted(as_json) == sorted(listed) and all(as_json[n] == listed[n]["id"] for n in lv.ARCHIVES), str(as_json))
+    start, end, json_text = lv.page_json(api, oldest["id"], "HEAD")
+    r.check("mirth.log.1.zip's first page as JSON is the XML page, HL7's lone CRs kept",
+            (start, end) == (int(head["startOffset"]), int(head["endOffset"])) and json_text == head["text"],
+            f"offsets {start}-{end}, {len(json_text)} characters")
+
     plain = lv.matching_lines(text, lambda line: QUERY in line)
     result, matches = lv.search(api, QUERY, file_id=oldest["id"])
     r.check(f"a search of mirth.log.1.zip finds the {plain} lines with '{QUERY}'",
             plain > 0 and result["complete"] == "true" and len(matches) == plain
             and all(QUERY in m["lineText"] for m in matches), f"{len(matches)} matches")
     result, matches = lv.search(api, QUERY.upper(), case_sensitive=False, file_id=oldest["id"])
-    r.check("the same search in capitals, ignoring case, finds the same lines", len(matches) == plain,
-            f"{len(matches)} matches")
+    r.check("the same search in capitals, ignoring case, finds the same lines",
+            result["complete"] == "true" and len(matches) == plain
+            and all(QUERY.lower() in m["lineText"].lower() for m in matches), f"{len(matches)} matches")
     pattern = re.compile(REGEX)
     regex = lv.matching_lines(text, lambda line: pattern.search(line) is not None)
     result, matches = lv.search(api, REGEX, regex=True, file_id=oldest["id"])
@@ -156,7 +168,7 @@ def fresh(r, engine, db, name, settings, new_zip):
     api = engine.start()
     r.check("the zip installs through the engine's installer", *lv.install(api, new_zip))
     engine.stop()
-    api, since = start(engine)
+    api = engine.start()
     check_loaded(r, api, new_zip, "the build under test")
     check_server_jar(r, engine, new_zip)
     use_the_viewer(r, api, engine)
@@ -167,6 +179,13 @@ def fresh(r, engine, db, name, settings, new_zip):
             sorted(listed) == sorted(["mirth.log", *lv.ARCHIVES]), sorted(listed))
     engine.stop()
     check_quiet(r, engine, 0, "on any start")
+    expected = java_version(engine.java_home) if engine.java_home else None
+    logged = engine.java_versions_logged()
+    if expected:
+        r.check(f"each of the {engine.starts} starts ran on the Java given, {expected}",
+                len(logged) == engine.starts and all(v == expected for v in logged), str(logged))
+    else:
+        r.note("Java", f"no JAVA_HOME or --java-home with a release file; the engine logged {logged}")
 
 
 def upgrade(r, engine, db, name, settings, new_zip, old_zip, upgrade_engine=None):
@@ -256,10 +275,10 @@ def rbac(r, engine, db, name, settings, new_zip, rbac_zip):
     # rbac logs a WARN for each request it refuses, naming the plugin's operation. They must be exactly the
     # requests a role lacked the permission for: all five without log permissions, and view only's download.
     # The channel role passes rbac, so its refusals are the plugin's and log nothing.
-    lines = engine.plugin_log_lines(("WARN", "ERROR"), since)
+    lines = engine.plugin_log_lines(("WARN", "ERROR", "FATAL"), since)
     denial = re.compile(r"RBAC: User \d+ denied for operation 'OIE Log Viewer#(\w+)'")
     denied = sorted(m.group(1) for m in map(denial.search, lines) if m)
     r.check("rbac refused exactly the 6 requests the roles lack the permission for", denied == sorted(
         ["listFiles", "readPage", "search", "count", "download", "download"]), str(denied))
     others = [line for line in lines if not denial.search(line)]
-    r.check("no other WARN or ERROR from or about the plugin with rbac", not others, " | ".join(others)[:600])
+    r.check("no other WARN, ERROR or FATAL from or about the plugin with rbac", not others, " | ".join(others)[:600])

@@ -278,3 +278,20 @@ Still not covered by any automated test: the two user interfaces ([release-check
 covers them by hand), the 409 stale and 429 busy statuses, Windows engines, very large logs, and log4j
 configurations other than the engine's shipped one (archives in date folders are covered by unit
 tests).
+
+## Release review changes (2026-10-18)
+
+- **A tag becomes a draft release only from a commit whose Build run on `main` passed.** The release
+  workflow waits for that run, up to an hour, and refuses the tag if any job in it failed, the
+  end-to-end tests included, or if the commit never ran on `main`.
+- **`--label-as` relabels only the zips built for the target engine.** A release built for an older
+  engine keeps its own label, so its upgrade still starts on that engine and still passes through
+  the engine upgrade, as users' upgrades do.
+- **The end-to-end tests now also check:**
+  - the file list and a page as JSON, the form the web administrator asks for, against the XML
+    answers, carriage returns included. Search and count are still checked as XML only;
+  - that each engine start ran on the Java the run was given, from the version the engine logs;
+  - FATAL lines, and engine lines naming the plugin's package.
+- **The harness is shared.** `e2e/` is the harness from oie-cache-manager, with the rbac scenario
+  from simple-channel-history, renamed for this plugin. A fix to one copy needs carrying to the
+  others.
