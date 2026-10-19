@@ -6,9 +6,8 @@
 #
 #   git tag v1.0.0 && git push origin v1.0.0
 #
-# CI never publishes. From here (RELEASING.md): build and sign with the YubiKey,
-# replace the draft's zip AND its .sha256 with the signed ones, and publish by
-# hand.
+# CI never publishes. From here (RELEASING.md): optionally sign, replacing the
+# draft's zip AND its .sha256 with the signed ones, and publish by hand.
 #
 # The tag must match the version in all five files that carry it, oie.json's
 # engine range must be the engine plugin.xml names, and a tag whose release is
@@ -119,7 +118,7 @@ jobs:
             fi
           done
           if [ "$FAILED" -ne 0 ]; then
-            echo "Set the version in every file listed above (RELEASING.md, step 1) and tag again."
+            echo "Set the version in every file listed above (RELEASING.md, step 2) and tag again."
             exit 1
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
@@ -166,8 +165,8 @@ jobs:
           echo "asset=${ASSET}" >> "$GITHUB_OUTPUT"
 
       - name: Create DRAFT GitHub Release with assets
-        # Stays a draft: the zip is unsigned. A human signs with the YubiKey, replaces
-        # the zip and its .sha256, and publishes. Pinned to v2.6.2 by commit.
+        # Stays a draft: the zip is unsigned. A human signs it if wanted, replaces the
+        # zip and its .sha256, and publishes. Pinned to v2.6.2 by commit.
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65
         with:
           draft: true
