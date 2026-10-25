@@ -295,3 +295,21 @@ tests).
 - **The harness is shared.** `e2e/` is the harness from oie-cache-manager, with the rbac scenario
   from simple-channel-history, renamed for this plugin. A fix to one copy needs carrying to the
   others.
+
+## Compiled against OIE 4.7.0 (2026-10-25)
+
+- **The split 1.1.0 shipped with is over.** OIE 4.7.0 was published on 2026-10-21 from commit
+  `f9ba73e28`, and its `oie_unix_4_7_0.tar.gz` has the SHA-256
+  `ab08558873dc6be1e474afaacc46efe94d29c945cd3381c10d0ae548ecb429de`: the same commit and tarball
+  the 1.1.0 tests ran against ("Built for OIE 4.7.0 before its release", above), so that testing
+  applies to the published engine.
+  `mc.version` is now 4.7.0, `oie.dist.sha256` that hash, and `plugin.supported.mc.versions` back to
+  `${mc.version}`.
+- **These pins match the jars in the 4.7.0 tarball**, checked one by one: servlet-api 3.1.0,
+  javax.ws.rs-api 2.0.1, xstream 1.4.20, slf4j 1.7.30, log4j 2.26.1, rsyntaxtextarea 2.5.6,
+  reflections 0.9.10, commons-lang3 3.20.0, and xpp3 1.1.4c (byte for byte in `server-lib`; the copy
+  in `client-lib` is the same jar, signed).
+- **CI's end-to-end tests run on 4.7.0 itself.** With `mc.version` and
+  `plugin.supported.mc.versions` the same, nothing is relabelled. The upgrade from 1.0.0 still starts
+  on 4.6.0 (`e2e/engines.txt`) and upgrades the engine under it; the upgrade from 1.1.0 and the rbac
+  scenario run on 4.7.0 throughout.

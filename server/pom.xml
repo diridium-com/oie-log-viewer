@@ -42,7 +42,7 @@
         </dependency>
         <dependency>
             <!-- The XML pull parser behind XStream's Xpp3Driver, which is what the engine's
-                 serializer uses; 4.6.0 ships this exact jar in server-lib and client-lib.
+                 serializer uses; 4.7.0 ships this exact jar in server-lib, and signed in client-lib.
                  XStream declares it optional, so tests that round-trip the DTOs the way the
                  Administrator does must name it. -->
             <groupId>xpp3</groupId>
