@@ -313,3 +313,20 @@ tests).
   `plugin.supported.mc.versions` the same, nothing is relabelled. The upgrade from 1.0.0 still starts
   on 4.6.0 (`e2e/engines.txt`) and upgrades the engine under it; the upgrade from 1.1.0 and the rbac
   scenario run on 4.7.0 throughout.
+
+## The release workflow in two jobs (2026-10-25)
+
+- **The token that can write to the repository never shares a job with the build.** On a
+  GitHub-hosted runner any step can read its job's token, and the build runs Maven, npm and every
+  package they pull in. The build job's token can only read (`contents: read`, and `actions: read`
+  for the wait on the Build run); it uploads the zip and its `.sha256` as an artifact. The release
+  job holds `contents: write` and runs only `gh`, with no checkout, no build tools and no action: it
+  downloads the artifact, checks the zip against its `.sha256`, and creates or updates the draft.
+  `softprops/action-gh-release` is no longer used.
+- **The wait for the Build run stays in the build job.** It needs only `actions: read`, and in the
+  release job it would hold the write token for up to an hour.
+- **The published-release refusal runs after the build.** It moved into the release job, which is
+  the job that needs it, so a tag whose release is already published is refused only after the
+  build and tests. It still replaces nothing.
+- **Checkout keeps no credentials** (`persist-credentials: false`). No step needs them, and in
+  `.git/config` the token would be readable by every later step, the npm install included.

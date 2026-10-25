@@ -50,15 +50,19 @@ git tag vX.Y.Z
 git push origin vX.Y.Z
 ```
 
-`release.yml` runs with your repository's own `GITHUB_TOKEN`. It:
+`release.yml` runs with your repository's own `GITHUB_TOKEN`, in two jobs. The build job, whose
+token can only read the repository:
 
-- refuses a tag whose release is already published;
 - waits for the tagged commit's Build run on `main`, and refuses the tag unless every job in it
   passed, the end-to-end tests included;
 - checks the tag against the five version files, naming any that differ, and `oie.json`'s engine
   range against the engine `plugin.xml` names;
-- builds, runs the tests, and creates a **draft** release with `oie-log-viewer-X.Y.Z.zip` and its
-  `.sha256`.
+- builds, runs the tests, and uploads `oie-log-viewer-X.Y.Z.zip` and its `.sha256`.
+
+The release job, the only one whose token can write, runs no checkout and no build tools. It
+downloads those two files, checks the zip against its `.sha256`, refuses a tag whose release is
+already published, and creates a **draft** release with them, or replaces the files of an
+existing draft.
 
 Nothing is published automatically. Review the draft and publish it by hand.
 
