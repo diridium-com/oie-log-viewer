@@ -95,14 +95,10 @@ they are, including choices that can look like gaps.
 mvn -B -ntp clean package
 ```
 
-The script installs the four OIE 4.6.0 engine jars the plugin compiles against into your local
-Maven repository, taken from the published OIE 4.6.0 distribution and cached under
+The script installs the four OIE 4.7.0 engine jars the plugin compiles against into your local
+Maven repository, taken from the published OIE 4.7.0 distribution and cached under
 `~/.cache/oie-dist`. The first build downloads Node.js to build the web administrator UI. The
 installable zip is `package/target/oie-log-viewer-<version>.zip`.
-
-Version 1.1.0 is built for OIE 4.7.0 but compiles against the 4.6.0 jars, because 4.7.0 had not
-been published when it was released; [docs/design-notes.md](docs/design-notes.md) explains why
-that is safe and when it changes.
 
 CI also runs `e2e/run.py`, which installs the zip into the released engine through its own
 installer and uses the plugin on each database the engine supports. Its docstring says how to run

@@ -42,7 +42,7 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <!-- The version 4.6.0 ships in the Administrator's client-lib. Provided so it is
+            <!-- The version 4.7.0 ships in the Administrator's client-lib. Provided so it is
                  never packaged: the Administrator's own copy is the one on the classpath. -->
             <groupId>com.fifesoft</groupId>
             <artifactId>rsyntaxtextarea</artifactId>
